@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import axios from "axios";
 
 export default function Home() {
@@ -7,36 +7,63 @@ export default function Home() {
   const [status,setStatus] = useState("Ready");
   const [listening,setListening] = useState(false);
   const [mapLink,setMapLink] = useState("");
+  const recognitionRef = useRef(null);
 
-  const startListening = () => {
+ const startListening = () => {
 
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+const SpeechRecognition =
+window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    if(!SpeechRecognition){
-      alert("Speech recognition not supported");
-      return;
-    }
+if(!SpeechRecognition){
+alert("Speech recognition not supported");
+return;
+}
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+const recognition = new SpeechRecognition();
 
-    setListening(true);
-    setStatus("Voice protection active");
+recognition.continuous = true;
+recognition.interimResults = false;
 
-    recognition.onresult = (event)=>{
+recognitionRef.current = recognition;
 
-      const speech =
-      event.results[event.results.length-1][0].transcript.toLowerCase();
+setListening(true);
+setStatus("Voice protection active");
 
-      if(speech.includes("help me") || speech.includes("sos")){
-        triggerSOS();
-      }
+recognition.onresult = (event)=>{
 
-    };
+const speech =
+event.results[event.results.length-1][0].transcript.toLowerCase();
 
-    recognition.start();
-  };
+if(speech.includes("help me") || speech.includes("sos")){
+triggerSOS();
+}
+
+};
+
+recognition.onend = () => {
+
+if(listening && recognitionRef.current){
+recognitionRef.current.start();
+}
+
+};
+
+recognition.start();
+
+};
+
+
+  const stopListening = () => {
+
+setListening(false);
+
+if(recognitionRef.current){
+recognitionRef.current.stop();
+}
+
+setStatus("Voice protection stopped");
+
+};
 
 
   const triggerSOS = () => {
@@ -90,11 +117,14 @@ export default function Home() {
 
       <div className="centerArea">
 
-        <button className="voiceCircle" onClick={startListening}>
-          🎤
-          <span>
-          {listening ? "Listening..." : "Voice Protection"}
-          </span>
+        <button
+        className={`voiceCircle ${listening ? "voiceOn" : "voiceOff"}`}
+        onClick={listening ? stopListening : startListening}
+        >
+        🎤
+        <span>
+        {listening ? "Voice Protection ON" : "Voice Protection OFF"}
+        </span>
         </button>
 
         <button className="sosButton" onClick={triggerSOS}>
@@ -269,6 +299,23 @@ position:absolute;
 bottom:25px;
 font-size:15px;
 opacity:0.85;
+}
+
+.voiceOff{
+background:linear-gradient(135deg,#6c757d,#495057);
+animation:none;
+}
+
+.voiceOn{
+background:linear-gradient(135deg,#ff4d6d,#ff9a44);
+animation:voicePulse 1.8s infinite;
+box-shadow:0 0 25px rgba(255,80,80,0.7);
+}
+
+@keyframes voicePulse{
+0%{transform:scale(1)}
+50%{transform:scale(1.08)}
+100%{transform:scale(1)}
 }
 
 `}</style>
